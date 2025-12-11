@@ -1,25 +1,196 @@
-# arduino rc car 
-this is a arduino rc car that can be drivin with a remote controler. this car has a lcd disply and can reads leters and numbers. "fun fact" this car has exactily 25 wires.
+#include <IRremote.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-| **Engineer** | **School** | **Area of Interest** | **Grade** |
-|:--:|:--:|:--:|:--:|
-| javonni sierra| school of the arts | Mechanical Engineering | 8th 
+LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD 
+const int IR_RECEIVE_PIN = 12;  // Define the pin number for the IR Sensor
 
-![Relevant Name](https://live.staticflickr.com/65535/54973658062_66c4931c03_w.jpg)
-# Final Milestone
-
-My final milestone, I've come a long way from where I started just a couple of months ago and have added a lot to my project. It's fun building my rc car and figuring out how to get my lcd display to display. I changed the code a lot to allow the lcd display and the car wheels to work together which I go more in-depth about in my video below. I've loved this journey so far and I can't wait to see where this takes me in my future career.
-
-([![Javonni’s 2nd milestone ](https://thumbs.video-to-markdown.com/3ffcbf0e.jpg)](https://youtu.be/18TLrZjpg9o)")
-
-# Final Schematic.
-![Relevant Name](https://live.staticflickr.com/65535/52833486018_300de50504_h.jpg)
+const int A_1B = 5;
+const int A_1A = 6;
+const int B_1B = 9;
+const int B_1A = 10;
 
 
+int speed = 150;
 
-# First Milestone
+void setup() {
+  Serial.begin(9600);
+  lcd.init();  //initialize the lcd
+  lcd.backlight();  //open the backlight
+  //motor
+  pinMode(A_1B, OUTPUT);
+  pinMode(A_1A, OUTPUT);
+  pinMode(B_1B, OUTPUT);
+  pinMode(B_1A, OUTPUT);
+
+  //IR remote
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);  // Start the IR receiver // Start the receiver
+  Serial.println("REMOTE CONTROL START");
+
+}
+
+void loop() {
+  lcd.setCursor(3, 0); // set the cursor to column 3, line 0
+  lcd.print("GET OUT OF");  // Print a message to the LCD
   
+  lcd.setCursor(2, 1); // set the cursor to column 2, line 1
+  lcd.print(" MY SWAMP!!!");  // Print a message to the LCD.
+  if (IrReceiver.decode()) {
+    //    Serial.println(results.value,HEX);
+    String key = decodeKeyValue(IrReceiver.decodedIRData.command);
+    if (key != "ERROR") {
+      Serial.println(key);
 
-My first milestone was being able to first build the Adruino car, then, be able to code using Arduino IDE allowing the car to move. I also have enough knowledge to be able to talk about in detail what the Arduino Uno microcontroller is and how an H-Bridge works.
+      if (key == "+") {
+        speed += 50;
+      } else if (key == "-") {
+        speed -= 50;
+      } else if (key == "2") {
+        moveForward(speed);
+        delay(1000);
+      } else if (key == "1") {
+        moveLeft(speed);
+      } else if (key == "3") {
+        moveRight(speed);
+      } else if (key == "4") {
+        turnLeft(speed);
+      } else if (key == "6") {
+        turnRight(speed);
+      } else if (key == "7") {
+        backLeft(speed);
+      } else if (key == "9") {
+        backRight(speed);
+      } else if (key == "8") {
+        moveBackward(speed);
+        delay(1000);
+      }
 
-[![Javonni’s First Video](https://thumbs.video-to-markdown.com/ce48c037.jpg)](https://youtu.be/RzAQR5mTRQQ)
+      if (speed >= 255) {
+        speed = 255;
+      }
+      if (speed <= 0) {
+        speed = 0;
+      }
+      delay(500);
+      stopMove();
+    }
+
+    IrReceiver.resume();  // Enable receiving of the next value
+  }
+}
+
+void moveForward(int speed) {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, speed);
+  analogWrite(B_1B, speed);
+  analogWrite(B_1A, 0);
+}
+
+void moveBackward(int speed) {
+  analogWrite(A_1B, speed);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, speed);
+}
+
+void turnRight(int speed) {
+  analogWrite(A_1B, speed);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, speed);
+  analogWrite(B_1A, 0);
+}
+
+void turnLeft(int speed) {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, speed);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, speed);
+}
+
+void moveLeft(int speed) {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, speed);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, 0);
+}
+
+void moveRight(int speed) {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, speed);
+  analogWrite(B_1A, 0);
+}
+
+void backLeft(int speed) {
+  analogWrite(A_1B, speed);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, 0);
+}
+
+void backRight(int speed) {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, speed);
+}
+
+void stopMove() {
+  analogWrite(A_1B, 0);
+  analogWrite(A_1A, 0);
+  analogWrite(B_1B, 0);
+  analogWrite(B_1A, 0);
+}
+
+
+String decodeKeyValue(long result)
+{
+  switch(result){
+    case 0x16:
+      return "0";
+    case 0xC:
+      return "1"; 
+    case 0x18:
+      return "2"; 
+    case 0x5E:
+      return "3"; 
+    case 0x8:
+      return "4"; 
+    case 0x1C:
+      return "5"; 
+    case 0x5A:
+      return "6"; 
+    case 0x42:
+      return "7"; 
+    case 0x52:
+      return "8"; 
+    case 0x4A:
+      return "9"; 
+    case 0x9:
+      return "+"; 
+    case 0x15:
+      return "-"; 
+    case 0x7:
+      return "EQ"; 
+    case 0xD:
+      return "U/SD";
+    case 0x19:
+      return "CYCLE";         
+    case 0x44:
+      return "PLAY/PAUSE";   
+    case 0x43:
+      return "FORWARD";   
+    case 0x40:
+      return "BACKWARD";   
+    case 0x45:
+      return "POWER";   
+    case 0x47:
+      return "MUTE";   
+    case 0x46:
+      return "MODE";       
+    case 0x0:
+      return "ERROR";   
+    default :
+      return "ERROR";
+    }
+}
